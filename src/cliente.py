@@ -9,7 +9,6 @@ def start_client():
     Função principal para iniciar o cliente.
     """
     # Cria o socket do cliente (TCP)
-    # Usar 'with' garante que o socket será fechado no final
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             

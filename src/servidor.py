@@ -2,7 +2,7 @@ import socket
 import threading
 
 # Configurações do Servidor
-HOST = '127.0.0.1'  # Endereço IP local (localhost)
+HOST = '127.0.0.1' 
 PORTA = 12345       # Porta TCP para escutar (acima de 1024)
 
 def handle_client(conn, addr):

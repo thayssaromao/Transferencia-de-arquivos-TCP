@@ -4,6 +4,7 @@ import threading
 # Configurações do Servidor
 HOST = '127.0.0.1' 
 PORTA = 12345       # Porta TCP para escutar (acima de 1024)
+BUFFER_SIZE = 1024 # Tamanho padrão de buffer
 
 def handle_client(conn, addr):
     """
@@ -61,7 +62,8 @@ def start_server():
 
         # Coloca o socket em modo de escuta (listen)
         server_socket.listen()
-        print(f"🚀  Servidor TCP Multithread ouvindo em {HOST}:{PORTA}...")
+        print(f"\n ---------------------------------------\n")
+        print(f"🚀  Servidor TCP Multithread ouvindo em {HOST}:{PORTA}...\n")
 
         while True:
             # Aguarda (bloqueia) por uma nova conexão

@@ -1,8 +1,37 @@
 import socket
 
+BUFFER_SIZE = 4096
+EXIT_COMMAND = "SAIR"
+
 # Configurações do Cliente
-HOST = '127.0.0.1'  # IP do Servidor (mesmo do servidor)
-PORTA = 12345       # Porta do Servidor (mesma do servidor)
+def get_server_info():
+
+    print("=== Coletando dados da requisição ===")
+
+    default_host = '127.0.0.1'  # IP do Servidor (mesmo do servidor)
+    default_port = 12345       # Porta do Servidor (mesma do servidor)
+
+    host = input("Digite o IP do servidor (ex: 127.0.0.1): ").strip() or '127.0.0.1'
+    if not host:
+        host = default_host
+
+    while True:
+        port_str = input("Digite a porta do servidor (ex: 12345): ").strip() or '12345'
+
+        try:
+            if port_str:
+                port = int(port_str)
+            else:
+                port = default_port
+
+            if port <= 1024:
+                print("Portas abaixo de 1024 são reservadas. Escolha outra, porta padrão 12345.")
+                continue
+            break
+            
+        except ValueError:
+            print("Porta inválida. A porta deve ser um número inteiro.")  
+    return host, port
 
 def start_client():
     """

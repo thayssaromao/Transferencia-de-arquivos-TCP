@@ -37,6 +37,9 @@ def start_client():
     """
     Função principal para iniciar o cliente.
     """
+
+    HOST, PORTA = get_server_info()
+    
     # Cria o socket do cliente (TCP)
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:

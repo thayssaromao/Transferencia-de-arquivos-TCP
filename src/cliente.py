@@ -13,6 +13,7 @@ def start_client():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             
             # 1. Conecta ao servidor
+            print(f"\n ---------------------------------------\n")
             print(f"Tentando conectar em {HOST}:{PORTA}...")
             client_socket.connect((HOST, PORTA))
             print("✔️  Conectado ao servidor!")
@@ -35,6 +36,7 @@ def start_client():
         print(f"❌  Erro inesperado: {e}")
 
     print("🔌  Conexão fechada.")
+    print(f"\n ---------------------------------------")
 
 if __name__ == "__main__":
     start_client()

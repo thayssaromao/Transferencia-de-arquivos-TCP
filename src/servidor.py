@@ -82,7 +82,8 @@ def start_server():
 
         # Coloca o socket em modo de escuta (listen)
         server_socket.listen()
-        print(f"🚀  Servidor TCP Multithread ouvindo em {HOST}:{PORTA}...")
+        print(f"\n ---------------------------------------\n")
+        print(f"🚀  Servidor TCP Multithread ouvindo em {HOST}:{PORTA}...\n")
 
         while True:
             # Aguarda (bloqueia) por uma nova conexão

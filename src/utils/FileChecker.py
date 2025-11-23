@@ -1,7 +1,7 @@
 import os
 
 # Diretório onde os arquivos de teste estão localizados
-FILE_STORAGE_DIR = "../files"
+FILE_STORAGE_DIR = "files"
 
 def file_exists(filename):
     return os.path.exists(filename)

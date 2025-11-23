@@ -1,4 +1,6 @@
 import socket
+import threading # Novo
+import sys
 
 BUFFER_SIZE = 4096
 EXIT_COMMAND = "SAIR"
@@ -33,27 +35,34 @@ def get_server_info():
             print("Porta inválida. A porta deve ser um número inteiro.")  
     return host, port
 
-def handle_server_response(client_socket):
-    try:
-        #timeout para evitar que a thread bloqueie indefinidamente
-        client_socket.settimeout(3.0)
-        data = client_socket.recv(BUFFER_SIZE)
+def recv_handler(client_socket):
+    
+    while True:
+        try:
+            data = client_socket.recv(BUFFER_SIZE)
 
-        if data:
+            if not data:
+                print("\n[DESCONEXÃO] Servidor fechou a conexão. Encerrando escuta.")            
+                break
+            
             resposta = data.decode('utf-8')
-            print(f"📨 Resposta do Servidor: '{resposta}'")
-        else:
-            # Se recv() retornar vazio (0 bytes), o servidor fechou a conexão.            
-            print("Servidor fechou a conexão")
-            return False
-    except socket.timeout:
-        # Em algumas situações, o servidor pode não responder imediatamente (ex: CHAT sem eco)
-        pass 
-    except Exception as e:
-        print(f"Erro ao receber resposta: {e}")
-        return False   
 
-    return True
+            if resposta.startswith("CHAT_SERVER:"):
+                # Move o cursor para uma nova linha para não interromper o input do usuário
+                print(f"\n💬 [CHAT RECEBIDO] {resposta[13:].strip()}")
+                print(f"[CLIENTE] Digite o comando (ex: CHAT Ola, ARQUIVO nome.txt, SAIR): ", end="", flush=True)    
+
+            elif resposta.startswith("OK_CHAT"):
+                print(f"Confirmação do Servidor: {resposta}")
+
+            else:
+                print(f"\n[SERVIDOR] {resposta}")
+                print(f"[CLIENTE] Digite o comando (ex: CHAT Ola, ARQUIVO nome.txt, SAIR): ", end="", flush=True)
+
+        except socket.timeout:
+            continue 
+        except Exception as e:
+            break   
 
 def start_client():
     """
@@ -76,6 +85,14 @@ def start_client():
             client_socket.sendall(mensagem_inicial.encode('utf-8'))
             print(f"📤 Enviado: '{mensagem_inicial}'")
             
+            #Criação e Início da Thread de Escuta
+            client_socket.settimeout(None)
+
+            listener_thread = threading.Thread(target=recv_handler,args=(client_socket,))
+            listener_thread.daemon = True
+            listener_thread.start()
+
+            
             while True:
                 #Interface do Usuário: Recebe o comando do console
                 command = input(f"\n[CLIENTE] Digite o comando (ex:Ola, ARQUIVO nome.txt, SAIR)").strip()
@@ -95,12 +112,10 @@ def start_client():
                     break
 
                 #Enviar "Arquivo [Nome]" ou "Chat [Mensagem]"
-                elif cmd in ["ARQUIVO", "CHAT"]:
+                elif cmd == "ARQUIVO" or cmd == "CHAT":
                     client_socket.sendall(command.encode('utf-8'))
                     print(f"📤 Comando enviado: '{command}'")
 
-                    if not handle_server_response(client_socket):
-                        break
                 else:
                     print("Comando desconhecido. Use ARQUIVO, CHAT ou SAIR")
 

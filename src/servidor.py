@@ -2,6 +2,7 @@
 import socket
 import threading
 import os
+import time
 from utils.functions import calcula_sha256
 
 # Configurações do Servidor
@@ -73,9 +74,8 @@ def handle_client(conn, addr):
 
                 # 1️⃣ Envia cabeçalho com tamanho e hash
                 cabecalho = f"TAMANHO {tamanho} SHA256 {hash_sha256}"
-                conn.sendall(cabecalho.encode('utf-8'))
-
-                # 2️⃣ Envia bytes do arquivo
+                conn.sendall((cabecalho + "\n").encode('utf-8'))
+                time.sleep(0.05)  # força separação entre pacotes
                 conn.sendall(conteudo)
 
                 print(f"📤 Arquivo '{nome_arquivo}' enviado ({tamanho} bytes).")

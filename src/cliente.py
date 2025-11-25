@@ -11,9 +11,8 @@ EXIT_COMMAND = "SAIR"
 
 # variáveis globais
 lista_arquivos_servidor = []
-arquivo_solicitado = ""
-arquivo_lock = threading.Lock()  # sincroniza acesso a arquivo_solicitado
-
+arquivo_em_download = None
+arquivo_lock = threading.Lock()
 
 # Configurações do Cliente
 def get_server_info():
@@ -47,26 +46,25 @@ def recv_handler(client_socket):
     """
     Lida com o recebimento de mensagens do servidor.
     """
-    global lista_arquivos_servidor
-    global arquivo_solicitado
+    global arquivo_em_download
+
 
     while True:
         try:
-            
             data = client_socket.recv(BUFFER_SIZE)
 
             if not data:
                 print("\n[DESCONEXÃO] Servidor fechou a conexão. Encerrando escuta.")            
                 break
-                       
-            resposta = data.decode('utf-8') 
 
-            # --- TRATAMENTO DE ERROS DO SERVIDOR ---
-            if resposta.startswith("ERRO_"):
-                print(f"\n❌ [ERRO SERVIDOR] {resposta}")
-                with arquivo_lock:
-                    arquivo_solicitado = ""
-                continue
+            #print(f"[DEBUG] Bytes brutos recebidos: {len(data)} | primeiros 50 bytes: {data[:50]}")
+
+            try:
+                resposta = data.decode('utf-8') 
+                print(f"[DEBUG] Decodificado como UTF-8: {resposta[:50]}{'...' if len(resposta)>50 else ''}")
+            except UnicodeDecodeError:
+                print(f"[DEBUG] Não foi possível decodificar os bytes como UTF-8, provavelmente é um arquivo.")
+                resposta = ""  # evita que o resto quebre
 
             if resposta.startswith("CHAT_SERVER:"):
                 print(f"\n[CHAT RECEBIDO] {resposta[13:].strip()}")
@@ -74,6 +72,7 @@ def recv_handler(client_socket):
             elif resposta.startswith("OK_CHAT"):
                 print(f"\nConfirmação do Servidor: {resposta}")
             
+            # Resposta de listagem de arquivos
             elif ";" in resposta or resposta == "VAZIO":
                 lista_arquivos_servidor.clear()
 
@@ -82,67 +81,67 @@ def recv_handler(client_socket):
                 else:
                     arquivos = [a.strip() for a in resposta.split(";") if a.strip()]
                     lista_arquivos_servidor.extend(arquivos)
+                
+                print("\n📄 Arquivos disponíveis no servidor:")
+                for arq in lista_arquivos_servidor:
+                    print(" -", arq)
                 continue
 
             elif resposta.startswith("TAMANHO"):
-                with arquivo_lock:
-                    if not arquivo_solicitado:
-                        # Se não houver arquivo definido, espera um pouco
-                        time.sleep(0.1)
-                        if not arquivo_solicitado:
-                            print("❌ Erro: nenhum arquivo foi solicitado. Ignorando pacote.")
-                            continue
-                    nome_do_arquivo = arquivo_solicitado  # captura a variável dentro do lock
-                try:
-                
-                    partes = resposta.split()
-                    tamanho = int(partes[1])
-                    hash_servidor = partes[3]
+                if not arquivo_em_download:
+                    print("❌ Erro: nenhum arquivo foi solicitado!")
+                    continue  
 
-                    print(f"\n📥 Tamanho recebido: {tamanho} bytes")
-                    print(f"🔐 Hash SHA-256: {hash_servidor}")
+                partes = resposta.split()
+                tamanho = int(partes[1])
+                hash_servidor = partes[3]
 
-                    # SALVAR EM PASTA 'recebidos' DENTRO DO PROJETO
-                    dir_path = os.path.join(os.getcwd(), "recebidos")
-                    os.makedirs(dir_path, exist_ok=True)
-                    caminho_final = os.path.join(dir_path, nome_do_arquivo)
+                print(f"\n📥 Tamanho: {tamanho} bytes")
+                print(f"🔐 Hash servidor: {hash_servidor}")
+                print(f"⬇️  Baixando: {arquivo_em_download}")
 
-                    with open(caminho_final, "wb") as f:
-                        recebido = 0
-                        while recebido < tamanho:
-                            bytes_restantes = min(BUFFER_SIZE, tamanho - recebido)
-                            chunk = client_socket.recv(bytes_restantes)
-                            if not chunk:
-                                raise Exception("Conexão interrompida durante o download")
-                            f.write(chunk)
-                            recebido += len(chunk)
+                # Prepara diretório
+                dir_path = os.path.join(os.getcwd(), "recebidos")
+                os.makedirs(dir_path, exist_ok=True)
+                caminho_final = os.path.join(dir_path, arquivo_em_download)
 
+                with open(caminho_final, "wb") as f:
+                    recebido = 0
+                    while recebido < tamanho:
+                        chunk = client_socket.recv(min(BUFFER_SIZE, tamanho - recebido))
+                        if not chunk:
+                            print(f"[DEBUG] Chunk vazio recebido! Recebido até agora: {recebido}/{tamanho} bytes")
+                            raise Exception("Conexão interrompida durante o download")
+                        f.write(chunk)
+                        recebido += len(chunk)
+                        print(f"[DEBUG] Recebido até agora: {recebido}/{tamanho} bytes")
 
                     print(f"✅ Download concluído: {caminho_final}")
+                    print(f"[DEBUG] Arquivo salvo com {os.path.getsize(caminho_final)} bytes")
                 
-                    # --- VERIFICAÇÃO DE HASH ---
-                    hash_local = calcula_sha256(caminho_final)
-                    if hash_local == hash_servidor:
-                        print("Arquivo recebido com sucesso! Hash conferido.")
-                    else:
-                        print("Falha na integridade do arquivo! Hash não confere.")
+                
+                print(f"✔ Arquivo salvo em: {caminho_final}")
 
-                
-                except Exception as e:
-                    print(f"Erro ao salvar arquivo: {e}")
-                finally:
-                    with arquivo_lock:
-                        arquivo_solicitado = ""
-                continue 
+                # --- VERIFICAÇÃO DE HASH ---
+                hash_local = calcula_sha256(caminho_final)
+                if hash_local == hash_servidor:
+                    print("Arquivo recebido com sucesso! Hash conferido.")
+                else:
+                    print("Falha na integridade do arquivo! Hash não confere.")
+
+                # Limpa variável
+                arquivo_em_download = None
+                continue
+
             else:
-                #print(f"\n[SERVIDOR] {resposta}")
-                print(f"\n[SERVIDOR]")
+                print(f"\n[SERVIDOR] ")#{resposta if resposta else '[DADOS BINÁRIOS OU CHUNK]'}
 
         except socket.timeout:
             continue 
         except Exception as e:
             print(f"\n[ERRO] Falha na thread de recepção: {e}")
-            break   
+            break
+
 
 def start_client():
     """
@@ -179,7 +178,7 @@ def start_client():
                 print("       MENU DO CLIENTE")
                 print("="*30)
                 print("1. 💬 Enviar Mensagem (CHAT)")
-                print("2. 📂 Baixar Arquivo (ARQUIVO)")
+                print("2. 📂 Arquivo (ARQUIVO)")
                 print("3. ❌ Sair (SAIR)")
                 print("="*30)
                 
@@ -197,41 +196,22 @@ def start_client():
                         print("⚠️  Mensagem vazia não enviada.")
 
                 # Lógica da Opção 2: ARQUIVO
-                elif opcao == "2":
-                    print("\n📂 Solicitando lista de arquivos...")
+                elif opcao == "2":  
+                    nome_do_arquivo = input("Digite o nome do arquivo que deseja baixar: ").strip()
 
-                    lista_arquivos_servidor.clear()
-                    client_socket.sendall("LISTAR_ARQUIVOS".encode('utf-8'))
-
-                    # espera thread preencher a lista
-                    while not lista_arquivos_servidor:
-                        time.sleep(0.1)
-
-                    arquivos = lista_arquivos_servidor.copy()
-                    lista_arquivos_servidor.clear()
-
-                    if arquivos[0] == "VAZIO":
-                        print("❌ Servidor não possui arquivos.")
+                    if not nome_do_arquivo:
+                        print("❌ Nome inválido.")
                         continue
 
-                    print("\n--- Arquivos disponíveis ---")
-                    for i, nome in enumerate(arquivos):
-                        print(f"[{i+1}] {nome}")
+                    global arquivo_em_download
+                    
+                    with arquivo_lock:
+                        arquivo_em_download = nome_do_arquivo
 
-                    escolha = input("\nEscolha o número do arquivo: ").strip()
+                    comando = f"ARQUIVO {nome_do_arquivo}"
+                    client_socket.sendall(comando.encode('utf-8'))
+                    print(f"📤 Solicitado: {comando}")
 
-                    try:
-                        indice = int(escolha) - 1
-                        if 0 <= indice < len(arquivos):
-                            with arquivo_lock:
-                                arquivo_solicitado = arquivos[indice]
-                            comando = f"ARQUIVO {arquivo_solicitado}"
-                            client_socket.sendall(comando.encode('utf-8'))
-                            print(f"📤 Solicitado: {arquivo_solicitado}")
-                        else:
-                            print("Número inválido.")
-                    except ValueError:
-                        print("Entrada inválida, digite apenas números.")
 
 
                 elif opcao == "3":

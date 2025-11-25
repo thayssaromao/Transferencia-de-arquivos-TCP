@@ -2,6 +2,7 @@
 import socket
 import threading # Novo
 from utils import FileChecker
+from utils.functions import calcula_sha256
 import os
 import time
 
@@ -60,6 +61,13 @@ def recv_handler(client_socket):
                        
             resposta = data.decode('utf-8') 
 
+            # --- TRATAMENTO DE ERROS DO SERVIDOR ---
+            if resposta.startswith("ERRO_"):
+                print(f"\n❌ [ERRO SERVIDOR] {resposta}")
+                with arquivo_lock:
+                    arquivo_solicitado = ""
+                continue
+
             if resposta.startswith("CHAT_SERVER:"):
                 print(f"\n[CHAT RECEBIDO] {resposta[13:].strip()}")
             
@@ -76,7 +84,7 @@ def recv_handler(client_socket):
                     lista_arquivos_servidor.extend(arquivos)
                 continue
 
-            elif resposta.startswith("TAMANHO "):
+            elif resposta.startswith("TAMANHO"):
                 with arquivo_lock:
                     if not arquivo_solicitado:
                         # Se não houver arquivo definido, espera um pouco
@@ -111,8 +119,17 @@ def recv_handler(client_socket):
 
 
                     print(f"✅ Download concluído: {caminho_final}")
+                
+                    # --- VERIFICAÇÃO DE HASH ---
+                    hash_local = calcula_sha256(caminho_final)
+                    if hash_local == hash_servidor:
+                        print("Arquivo recebido com sucesso! Hash conferido.")
+                    else:
+                        print("Falha na integridade do arquivo! Hash não confere.")
+
+                
                 except Exception as e:
-                    print(f"❌ Erro ao salvar arquivo: {e}")
+                    print(f"Erro ao salvar arquivo: {e}")
                 finally:
                     with arquivo_lock:
                         arquivo_solicitado = ""

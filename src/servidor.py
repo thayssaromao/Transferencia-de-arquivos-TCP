@@ -11,8 +11,15 @@ BUFFER_SIZE = 1024 # Tamanho padrão de buffer
 
 SERVER_FILES_DIR = "files"
 
+# Lista global para armazenar conexões ativas
+clientes_conectados = []
+clientes_lock = threading.Lock()  # Para sincronizar acesso à lista
+
 def handle_client(conn, addr):
     print(f"✔️  [NOVA CONEXÃO] {addr} conectado.")
+
+    with clientes_lock:
+        clientes_conectados.append(conn)
 
     try:
         while True:
@@ -23,7 +30,11 @@ def handle_client(conn, addr):
 
             mensagem = data.decode('utf-8', errors='ignore')
 
-             # -------------------------------------------------------
+            if mensagem.strip().upper() == "SAIR":
+                print(f"🔌  [CLIENTE {addr}] Enviou comando SAIR. Encerrando conexão.")
+                break
+
+            # -------------------------------------------------------
             # 📁 LISTAR ARQUIVOS
             # -------------------------------------------------------
             if mensagem == "LISTAR_ARQUIVOS":
@@ -79,8 +90,27 @@ def handle_client(conn, addr):
     except Exception as e:
         print(f"❌ [ERRO] Cliente {addr}: {e}")
     finally:
+        # Remove cliente da lista quando desconectar
+        with clientes_lock:
+            if conn in clientes_conectados:
+                clientes_conectados.remove(conn)
         conn.close()
         print(f"🔒 [CLIENTE {addr}] Conexão encerrada.")
+
+def broadcast_chat(mensagem):
+    with clientes_lock:
+        for cliente in clientes_conectados:
+            try:
+                cliente.sendall(f"CHAT_SERVER: {mensagem}".encode('utf-8'))
+            except:
+                pass  # Ignora erros de clientes desconectados
+
+def server_chat_console():
+    while True:
+        msg = input()
+        if msg.strip():  # Evita enviar mensagens vazias
+            broadcast_chat(msg)
+
 
 def start_server():
     """
@@ -102,6 +132,10 @@ def start_server():
         server_socket.listen()
         print(f"\n ---------------------------------------\n")
         print(f"🚀  Servidor TCP Multithread ouvindo em {HOST}:{PORTA}...\n")
+
+        chat_thread = threading.Thread(target=server_chat_console)
+        chat_thread.daemon = True
+        chat_thread.start()
 
         while True:
             # Aguarda (bloqueia) por uma nova conexão

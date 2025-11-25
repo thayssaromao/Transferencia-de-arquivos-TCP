@@ -5,9 +5,14 @@ from utils import FileChecker
 import os
 import time
 
-
 BUFFER_SIZE = 4096
 EXIT_COMMAND = "SAIR"
+
+# variáveis globais
+lista_arquivos_servidor = []
+arquivo_solicitado = ""
+arquivo_lock = threading.Lock()  # sincroniza acesso a arquivo_solicitado
+
 
 # Configurações do Cliente
 def get_server_info():
@@ -41,32 +46,85 @@ def recv_handler(client_socket):
     """
     Lida com o recebimento de mensagens do servidor.
     """
+    global lista_arquivos_servidor
+    global arquivo_solicitado
+
     while True:
         try:
+            
             data = client_socket.recv(BUFFER_SIZE)
 
             if not data:
                 print("\n[DESCONEXÃO] Servidor fechou a conexão. Encerrando escuta.")            
                 break
-            
-            resposta = data.decode('utf-8')
+                       
+            resposta = data.decode('utf-8') 
 
             if resposta.startswith("CHAT_SERVER:"):
-                # Move o cursor para uma nova linha para não interromper o input do usuário
-                print(f"\n💬 [CHAT RECEBIDO] {resposta[13:].strip()}")
-                print(f"[CLIENTE] Digite o comando (ex: CHAT Ola, ARQUIVO nome.txt, SAIR): ", end="", flush=True)    
-
+                print(f"\n[CHAT RECEBIDO] {resposta[13:].strip()}")
+            
             elif resposta.startswith("OK_CHAT"):
-                print(f"Confirmação do Servidor: {resposta}")
+                print(f"\nConfirmação do Servidor: {resposta}")
+            
+            elif ";" in resposta or resposta == "VAZIO":
+                lista_arquivos_servidor.clear()
 
+                if resposta == "VAZIO":
+                    lista_arquivos_servidor.append("VAZIO")
+                else:
+                    arquivos = [a.strip() for a in resposta.split(";") if a.strip()]
+                    lista_arquivos_servidor.extend(arquivos)
+                continue
+
+            elif resposta.startswith("TAMANHO "):
+                with arquivo_lock:
+                    if not arquivo_solicitado:
+                        # Se não houver arquivo definido, espera um pouco
+                        time.sleep(0.1)
+                        if not arquivo_solicitado:
+                            print("❌ Erro: nenhum arquivo foi solicitado. Ignorando pacote.")
+                            continue
+                    nome_do_arquivo = arquivo_solicitado  # captura a variável dentro do lock
+                try:
+                
+                    partes = resposta.split()
+                    tamanho = int(partes[1])
+                    hash_servidor = partes[3]
+
+                    print(f"\n📥 Tamanho recebido: {tamanho} bytes")
+                    print(f"🔐 Hash SHA-256: {hash_servidor}")
+
+                    # SALVAR EM PASTA 'recebidos' DENTRO DO PROJETO
+                    dir_path = os.path.join(os.getcwd(), "recebidos")
+                    os.makedirs(dir_path, exist_ok=True)
+                    caminho_final = os.path.join(dir_path, nome_do_arquivo)
+
+                    with open(caminho_final, "wb") as f:
+                        recebido = 0
+                        while recebido < tamanho:
+                            bytes_restantes = min(BUFFER_SIZE, tamanho - recebido)
+                            chunk = client_socket.recv(bytes_restantes)
+                            if not chunk:
+                                raise Exception("Conexão interrompida durante o download")
+                            f.write(chunk)
+                            recebido += len(chunk)
+
+
+                    print(f"✅ Download concluído: {caminho_final}")
+                except Exception as e:
+                    print(f"❌ Erro ao salvar arquivo: {e}")
+                finally:
+                    with arquivo_lock:
+                        arquivo_solicitado = ""
+                continue 
             else:
-                print(f"\n[SERVIDOR] {resposta}")
+                #print(f"\n[SERVIDOR] {resposta}")
+                print(f"\n[SERVIDOR]")
 
-            print("\n(Pressione Enter para ver o menu ou digite sua opção...): ", end="", flush=True)
-        
         except socket.timeout:
             continue 
         except Exception as e:
+            print(f"\n[ERRO] Falha na thread de recepção: {e}")
             break   
 
 def start_client():
@@ -96,13 +154,15 @@ def start_client():
             listener_thread.daemon = True
             listener_thread.start()
 
+            
+
             while True:
                 # --- MENU INTERATIVO ---
                 print("\n" + "="*30)
                 print("       MENU DO CLIENTE")
                 print("="*30)
                 print("1. 💬 Enviar Mensagem (CHAT)")
-                print("2. 📂 Enviar Arquivo (ARQUIVO)")
+                print("2. 📂 Baixar Arquivo (ARQUIVO)")
                 print("3. ❌ Sair (SAIR)")
                 print("="*30)
                 
@@ -121,70 +181,42 @@ def start_client():
 
                 # Lógica da Opção 2: ARQUIVO
                 elif opcao == "2":
-                    dir_path = FileChecker.FILE_STORAGE_DIR
-                    
-                    if not os.path.exists(dir_path):
-                        print(f"❌ Diretório '{dir_path}' não existe. Criando...")
-                        os.makedirs(dir_path, exist_ok=True)
+                    print("\n📂 Solicitando lista de arquivos...")
 
-                    # 1. Obter lista real de arquivos (para poder indexar)
-                    lista_arquivos = []
-                    try:
-                        lista_arquivos = [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
-                    except Exception as e:
-                        print(f"Erro ao ler diretório: {e}")
+                    lista_arquivos_servidor.clear()
+                    client_socket.sendall("LISTAR_ARQUIVOS".encode('utf-8'))
+
+                    # espera thread preencher a lista
+                    while not lista_arquivos_servidor:
+                        time.sleep(0.1)
+
+                    arquivos = lista_arquivos_servidor.copy()
+                    lista_arquivos_servidor.clear()
+
+                    if arquivos[0] == "VAZIO":
+                        print("❌ Servidor não possui arquivos.")
                         continue
 
-                    if not lista_arquivos:
-                        print(f"⚠️  Nenhum arquivo encontrado na pasta '{dir_path}'. Adicione arquivos lá para testar.")
-                        continue
+                    print("\n--- Arquivos disponíveis ---")
+                    for i, nome in enumerate(arquivos):
+                        print(f"[{i+1}] {nome}")
 
-                    # 2. Exibir lista numerada
-                    print(f"\n--- Arquivos disponíveis em '{dir_path}' ---")
-                    for i, arquivo in enumerate(lista_arquivos):
-                        print(f"[{i + 1}] {arquivo}")
-                    
-                    # 3. Escolher arquivo pelo número
-                    escolha = input("\nDigite o NÚMERO do arquivo para enviar: ").strip()
+                    escolha = input("\nEscolha o número do arquivo: ").strip()
 
                     try:
-                        indice = int(escolha) - 1 # Ajusta pois lista começa em 0 e menu em 1
-                        
-                        if 0 <= indice < len(lista_arquivos):
-                            nome_arquivo = lista_arquivos[indice] # Pega o nome baseado no número
-                            caminho_completo = os.path.join(dir_path, nome_arquivo)
-                            tamanho_arquivo = os.path.getsize(caminho_completo)
-
-                            print(f"Preparando para enviar '{nome_arquivo}' ({tamanho_arquivo} bytes)...")
-                            
-                            # Envia Cabeçalho
-                            cabecalho = f"ARQUIVO {nome_arquivo} {tamanho_arquivo}"
-                            client_socket.sendall(cabecalho.encode('utf-8'))
-                            
-                            time.sleep(0.1) # Pausa técnica
-
-                            # Envia Conteúdo Binário
-                            try:
-                                with open(caminho_completo, "rb") as f:
-                                    bytes_enviados = 0
-                                    while True:
-                                        bytes_read = f.read(BUFFER_SIZE)
-                                        if not bytes_read:
-                                            break
-                                        client_socket.sendall(bytes_read)
-                                        bytes_enviados += len(bytes_read)
-                                        #print(f"\rEnviando: {bytes_enviados}/{tamanho_arquivo} bytes...", end="")
-                                
-                                print(f"\n📤 Arquivo '{nome_arquivo}' enviado com sucesso!")
-                            
-                            except Exception as e:
-                                print(f"\n❌ Erro ao ler/enviar arquivo: {e}")
-
+                        indice = int(escolha) - 1
+                        if 0 <= indice < len(arquivos):
+                            with arquivo_lock:
+                                arquivo_solicitado = arquivos[indice]
+                            comando = f"ARQUIVO {arquivo_solicitado}"
+                            client_socket.sendall(comando.encode('utf-8'))
+                            print(f"📤 Solicitado: {arquivo_solicitado}")
                         else:
-                            print("❌ Número inválido. Escolha um número da lista.")
-                    
+                            print("Número inválido.")
                     except ValueError:
-                        print("❌ Entrada inválida. Digite apenas o número.")
+                        print("Entrada inválida, digite apenas números.")
+
+
                 elif opcao == "3":
                     print(f"📤 Enviando comando '{EXIT_COMMAND}' e encerrando...")
                     client_socket.sendall(EXIT_COMMAND.encode('utf-8'))

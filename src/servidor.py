@@ -9,6 +9,8 @@ HOST = '127.0.0.1'
 PORTA = 12345       # Porta TCP para escutar (acima de 1024)
 BUFFER_SIZE = 1024 # Tamanho padrão de buffer
 
+SERVER_FILES_DIR = "files"
+
 def handle_client(conn, addr):
     print(f"✔️  [NOVA CONEXÃO] {addr} conectado.")
 
@@ -21,49 +23,52 @@ def handle_client(conn, addr):
 
             mensagem = data.decode('utf-8', errors='ignore')
 
+             # -------------------------------------------------------
+            # 📁 LISTAR ARQUIVOS
             # -------------------------------------------------------
-            # 🔥 TRATAMENTO DO PROTOCOLO ARQUIVO
-            # -------------------------------------------------------
-            if mensagem.startswith("ARQUIVO "):
-                partes = mensagem.split(" ", 2)
-                nome_arquivo = partes[1]
-                tamanho = int(partes[2])
+            if mensagem == "LISTAR_ARQUIVOS":
+                try:
+                    arquivos = os.listdir(SERVER_FILES_DIR)
+                    # Apenas arquivos, ignorar pastas
+                    arquivos = [f for f in arquivos if os.path.isfile(os.path.join(SERVER_FILES_DIR, f))]
+                    resposta = ";".join(arquivos) if arquivos else "VAZIO"
+                except:
+                    resposta = "ERRO_LISTAR"
 
-                print(f"📥 Recebendo arquivo '{nome_arquivo}' ({tamanho} bytes) de {addr}...")
-
-                # 1. Ler os bytes do arquivo
-                bytes_recebidos = 0
-                conteudo_arquivo = b""
-
-                while bytes_recebidos < tamanho:
-                    chunk = conn.recv(min(BUFFER_SIZE, tamanho - bytes_recebidos))
-                    if not chunk:
-                        break
-
-                    conteudo_arquivo += chunk
-                    bytes_recebidos += len(chunk)
-
-                # 2. Salvar arquivo na pasta local (opcional)
-                os.makedirs("recebidos", exist_ok=True)
-                caminho = os.path.join("recebidos", nome_arquivo)
-                with open(caminho, "wb") as f:
-                    f.write(conteudo_arquivo)
-
-                print(f"✅ Arquivo '{nome_arquivo}' recebido com sucesso ({bytes_recebidos} bytes).")
-
-                # ---------------------------------------------------
-                # 🔐 3. CALCULAR HASH SHA-256
-                # ---------------------------------------------------
-                hash_sha256 = calcula_sha256(caminho)
-                print(f"🔎 SHA-256 do arquivo '{nome_arquivo}': {hash_sha256}")
-
-                # ---------------------------------------------------
-                # 4. Enviar resposta ao cliente com o hash
-                # ---------------------------------------------------
-                resposta = f"ARQUIVO_OK {nome_arquivo} SHA256 {hash_sha256}"
                 conn.sendall(resposta.encode('utf-8'))
                 continue
+
             # -------------------------------------------------------
+            # 📄 ENVIAR ARQUIVO SOLICITADO
+            # -------------------------------------------------------
+            if mensagem.startswith("ARQUIVO "):
+                partes = mensagem.split(" ", 1)
+                nome_arquivo = partes[1]
+
+                caminho = os.path.join(SERVER_FILES_DIR, nome_arquivo)
+
+                # Verifica se arquivo existe
+                if not os.path.exists(caminho):
+                    erro = f"ERRO_ARQUIVO_INEXISTENTE {nome_arquivo}"
+                    conn.sendall(erro.encode('utf-8'))
+                    continue
+
+                # Lê arquivo
+                with open(caminho, "rb") as f:
+                    conteudo = f.read()
+
+                tamanho = len(conteudo)
+                hash_sha256 = calcula_sha256(caminho)
+
+                # 1️⃣ Envia cabeçalho com tamanho e hash
+                cabecalho = f"TAMANHO {tamanho} SHA256 {hash_sha256}"
+                conn.sendall(cabecalho.encode('utf-8'))
+
+                # 2️⃣ Envia bytes do arquivo
+                conn.sendall(conteudo)
+
+                print(f"📤 Arquivo '{nome_arquivo}' enviado ({tamanho} bytes).")
+                continue    
 
             # CHAT / mensagens normais
             print(f"💬 [MENSAGEM] {addr}: {mensagem}")

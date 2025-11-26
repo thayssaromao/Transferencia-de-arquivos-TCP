@@ -137,11 +137,6 @@ def start_server():
             # A thread principal (esta) volta imediatamente para o accept()
             client_thread = threading.Thread(target=handle_client, args=(conn, addr))
             client_thread.start()
-            
-            # Mostra quantas threads (clientes) estão ativas
-            # (-1 para não contar a thread principal)
-            with clientes_lock:
-                print(f"Ativas: {len(clientes_conectados)} conexões de clientes.")
 
     except KeyboardInterrupt:
         print("\nServidor sendo desligado...")

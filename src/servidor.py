@@ -23,7 +23,7 @@ def handle_client(conn, addr):
 
     with clientes_lock:
         clientes_conectados.append(conn)
-
+        print(f"Ativas: {len(clientes_conectados)} clientes.")
     try:
         while True:
             data = conn.recv(BUFFER_SIZE)

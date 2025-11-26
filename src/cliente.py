@@ -1,6 +1,6 @@
 # cliente.py
 import socket
-import threading # Novo
+import threading 
 from utils import FileChecker
 from utils.functions import calcula_sha256
 import os
@@ -56,14 +56,9 @@ def recv_handler(client_socket):
             if not data:
                 print("\n[DESCONEXÃO] Servidor fechou a conexão. Encerrando escuta.")            
                 break
-
-            #print(f"[DEBUG] Bytes brutos recebidos: {len(data)} | primeiros 50 bytes: {data[:50]}")
-
             try:
                 resposta = data.decode('utf-8') 
-                print(f"[DEBUG] Decodificado como UTF-8: {resposta[:50]}{'...' if len(resposta)>50 else ''}")
             except UnicodeDecodeError:
-                print(f"[DEBUG] Não foi possível decodificar os bytes como UTF-8, provavelmente é um arquivo.")
                 resposta = ""  # evita que o resto quebre
 
             if resposta.startswith("CHAT_SERVER:"):
@@ -82,23 +77,23 @@ def recv_handler(client_socket):
                     arquivos = [a.strip() for a in resposta.split(";") if a.strip()]
                     lista_arquivos_servidor.extend(arquivos)
                 
-                print("\n📄 Arquivos disponíveis no servidor:")
+                print("\nArquivos disponíveis no servidor:")
                 for arq in lista_arquivos_servidor:
                     print(" -", arq)
                 continue
 
             elif resposta.startswith("TAMANHO"):
                 if not arquivo_em_download:
-                    print("❌ Erro: nenhum arquivo foi solicitado!")
+                    print("Erro: nenhum arquivo foi solicitado!")
                     continue  
 
                 partes = resposta.split()
                 tamanho = int(partes[1])
                 hash_servidor = partes[3]
 
-                print(f"\n📥 Tamanho: {tamanho} bytes")
-                print(f"🔐 Hash servidor: {hash_servidor}")
-                print(f"⬇️  Baixando: {arquivo_em_download}")
+                print(f"\nTamanho: {tamanho} bytes")
+                print(f"Hash servidor: {hash_servidor}")
+                print(f"Baixando: {arquivo_em_download}")
 
                 # Prepara diretório
                 dir_path = os.path.join(os.getcwd(), "recebidos")
@@ -110,14 +105,11 @@ def recv_handler(client_socket):
                     while recebido < tamanho:
                         chunk = client_socket.recv(min(BUFFER_SIZE, tamanho - recebido))
                         if not chunk:
-                            print(f"[DEBUG] Chunk vazio recebido! Recebido até agora: {recebido}/{tamanho} bytes")
                             raise Exception("Conexão interrompida durante o download")
                         f.write(chunk)
                         recebido += len(chunk)
-                        print(f"[DEBUG] Recebido até agora: {recebido}/{tamanho} bytes")
 
-                    print(f"✅ Download concluído: {caminho_final}")
-                    print(f"[DEBUG] Arquivo salvo com {os.path.getsize(caminho_final)} bytes")
+                    print(f"Download concluído: {caminho_final}")
                 
                 
                 print(f"✔ Arquivo salvo em: {caminho_final}")
@@ -134,7 +126,7 @@ def recv_handler(client_socket):
                 continue
 
             else:
-                print(f"\n[SERVIDOR] ")#{resposta if resposta else '[DADOS BINÁRIOS OU CHUNK]'}
+                print(f"\n[SERVIDOR] ")
 
         except socket.timeout:
             continue 
@@ -173,7 +165,7 @@ def start_client():
             
 
             while True:
-                # --- MENU INTERATIVO ---
+                # --- MENU INTERATIVO --- #
                 print("\n" + "="*30)
                 print("       MENU DO CLIENTE")
                 print("="*30)
@@ -184,7 +176,6 @@ def start_client():
                 
                 opcao = input("Escolha uma opção (1-3): \n").strip()
                 #Interface do Usuário: Recebe o comando do console
-                #command = input(f"\n[CLIENTE] Digite o comando (ex:Ola, ARQUIVO nome.txt, SAIR)").strip()
 
                 if opcao == "1":
                     mensagem = input("Digite sua mensagem: ").strip()
@@ -200,7 +191,7 @@ def start_client():
                     nome_do_arquivo = input("Digite o nome do arquivo que deseja baixar: ").strip()
 
                     if not nome_do_arquivo:
-                        print("❌ Nome inválido.")
+                        print("Nome inválido.")
                         continue
 
                     global arquivo_em_download
@@ -221,15 +212,15 @@ def start_client():
                 
                 # Tratamento de erro para opção inválida
                 else:
-                    print("⚠️  Opção inválida. Por favor, digite 1, 2 ou 3.")
+                    print("Opção inválida. Por favor, digite 1, 2 ou 3.")
 
     except socket.error as e:
-        print(f"\n❌  Erro de socket: {e}")
+        print(f"\nErro de socket: {e}")
         print("Verifique se o servidor (servidor.py) está rodando.")
     except Exception as e:
-        print(f"\n❌  Erro inesperado: {e}")
+        print(f"\nErro inesperado: {e}")
 
-    print("🔌  Conexão fechada.")
+    print("Conexão fechada.")
     print(f"---------------------------------------")
 
 if __name__ == "__main__":

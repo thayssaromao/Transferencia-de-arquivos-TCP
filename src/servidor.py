@@ -35,9 +35,8 @@ def handle_client(conn, addr):
                 print(f"🔌  [CLIENTE {addr}] Enviou comando SAIR. Encerrando conexão.")
                 break
 
-            # -------------------------------------------------------
-            # 📁 LISTAR ARQUIVOS
-            # -------------------------------------------------------
+
+            # LISTAR ARQUIVOS
             if mensagem == "LISTAR_ARQUIVOS":
                 try:
                     arquivos = os.listdir(SERVER_FILES_DIR)
@@ -50,16 +49,13 @@ def handle_client(conn, addr):
                 conn.sendall(resposta.encode('utf-8'))
                 continue
 
-            # -------------------------------------------------------
-            # 📄 ENVIAR ARQUIVO SOLICITADO
-            # -------------------------------------------------------
+            # ENVIAR ARQUIVO SOLICITADO
             if mensagem.startswith("ARQUIVO "):
                 partes = mensagem.split(" ", 1)
                 nome_arquivo = partes[1]
 
                 caminho = os.path.join(SERVER_FILES_DIR, nome_arquivo)
 
-                # Verifica se arquivo existe
                 if not os.path.exists(caminho):
                     erro = f"ERRO_ARQUIVO_INEXISTENTE {nome_arquivo}"
                     conn.sendall(erro.encode('utf-8'))
@@ -72,7 +68,7 @@ def handle_client(conn, addr):
                 tamanho = len(conteudo)
                 hash_sha256 = calcula_sha256(caminho)
 
-                # 1️⃣ Envia cabeçalho com tamanho e hash
+                #Envia cabeçalho com tamanho e hash
                 cabecalho = f"TAMANHO {tamanho} SHA256 {hash_sha256}"
                 conn.sendall((cabecalho + "\n").encode('utf-8'))
                 time.sleep(0.05)  # força separação entre pacotes
@@ -82,20 +78,20 @@ def handle_client(conn, addr):
                 continue    
 
             # CHAT / mensagens normais
-            print(f"💬 [MENSAGEM] {addr}: {mensagem}")
+            print(f"[MENSAGEM] {addr}: {mensagem}")
 
             resposta = f"OK_CHAT Recebido: {mensagem}"
             conn.sendall(resposta.encode('utf-8'))
 
     except Exception as e:
-        print(f"❌ [ERRO] Cliente {addr}: {e}")
+        print(f"[ERRO] Cliente {addr}: {e}")
     finally:
         # Remove cliente da lista quando desconectar
         with clientes_lock:
             if conn in clientes_conectados:
                 clientes_conectados.remove(conn)
         conn.close()
-        print(f"🔒 [CLIENTE {addr}] Conexão encerrada.")
+        print(f"[CLIENTE {addr}] Conexão encerrada.")
 
 def broadcast_chat(mensagem):
     with clientes_lock:
@@ -106,6 +102,9 @@ def broadcast_chat(mensagem):
                 pass  # Ignora erros de clientes desconectados
 
 def server_chat_console():
+    print("Servidor pronto para enviar mensagens!")
+    print("Servidor: ", end="", flush=True)
+
     while True:
         msg = input()
         if msg.strip():  # Evita enviar mensagens vazias
@@ -153,9 +152,9 @@ def start_server():
             print(f"Ativas: {threading.active_count() - 1} conexões de clientes.")
 
     except KeyboardInterrupt:
-        print("\n🛑  Servidor sendo desligado...")
+        print("\nServidor sendo desligado...")
     except Exception as e:
-        print(f"❌  Erro ao iniciar o servidor: {e}")
+        print(f"Erro ao iniciar o servidor: {e}")
     finally:
         # Fecha o socket principal do servidor
         server_socket.close()

@@ -17,7 +17,7 @@ def send_file_not_found(conn, filename):
     error_message = f"0 {filename} Arquivo não encontrado."
     if hasattr(conn, 'sendall'):
         conn.sendall(error_message.encode('utf-8'))
-    print(f"❌ [CLIENTE SIMULADO] Erro: Arquivo '{filename}' não encontrado.")
+    print(f"[CLIENTE SIMULADO] Erro: Arquivo '{filename}' não encontrado.")
 
 def list_directories(FILE_STORAGE_DIR):
     files_list = []
@@ -27,5 +27,3 @@ def list_directories(FILE_STORAGE_DIR):
     for index, filename in enumerate(files_list):
         print(f"[{index + 1}] {filename}")
 
-# print(f"\n=== Listando Arquivos disponíveis em '{FILE_STORAGE_DIR}' ===")
-# list_directories(FILE_STORAGE_DIR)

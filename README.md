@@ -26,8 +26,32 @@ Os comandos são enviados em texto plano. O delimitador entre o comando e o argu
 # 3. Formato das Respostas (Servidor → Cliente)
 O servidor responde com strings prefixadas para identificar o tipo de dado.
 
-Confirmação de Recebimento: OK_CHAT Recebido: `<mensagem_original>`
+Resposta ao cliente quando ele envia uma mensagem:
+```bash
+  OK_CHAT Recebido: <mensagem_original>
+```
 
-Mensagem do Servidor (Broadcast): CHAT_SERVER: `<mensagem>`
+Mensagem enviada pelo servidor para todos os clientes(Broadcast):
+```bash
+ CHAT_SERVER: <mensagem>`
+```
+Quando o arquivo NÃO existe:
+```bash
+ ERRO_ARQUIVO_INEXISTENTE <nome_solicitado>
+```
+Quando o arquivo EXISTE:
+```bash
+TAMANHO <bytes> SHA256 <hash>
+```
 
-Erro de Arquivo: ERRO_ARQUIVO_INEXISTENTE `<nome_solicitado>`
+# 4. Transferência do Arquivo
+- O cliente lê o arquivo em chunks de até 4096 bytes.
+- Essa segmentação ocorre somente no cliente, pois o servidor envia o arquivo inteiro
+
+# 5. Verificação de Integridade (SHA-256)
+O dono do arquivo (servidor) calcula o SHA-256 usando:
+```bash
+sha256.update(chunk)
+```
+O cliente repete o cálculo ao receber o arquivo.
+`Se HASH_LOCAL` == `HASH_SERVIDOR`, o download é considerado íntegro.

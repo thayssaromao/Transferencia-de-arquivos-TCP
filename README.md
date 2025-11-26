@@ -40,6 +40,7 @@ Quando o arquivo NÃO existe:
  ERRO_ARQUIVO_INEXISTENTE <nome_solicitado>
 ```
 Quando o arquivo EXISTE:
+- A resposta vem em quatro etapas, nesta ordem obrigatória
 ```bash
 TAMANHO <bytes> SHA256 <hash>
 ```
@@ -47,7 +48,17 @@ TAMANHO <bytes> SHA256 <hash>
 # 4. Transferência do Arquivo
 - O cliente lê o arquivo em chunks de até 4096 bytes.
 - Essa segmentação ocorre somente no cliente, pois o servidor envia o arquivo inteiro
+O cliente deve:
 
+1. Ler até completar o número exato de bytes informado em TAMANHO.
+
+2. Salvar o arquivo.
+
+3. Calcular o hash SHA256 local.
+
+4. Comparar com o informado no cabeçalho.
+
+   
 # 5. Verificação de Integridade (SHA-256)
 O dono do arquivo (servidor) calcula o SHA-256 usando:
 ```bash

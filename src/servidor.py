@@ -1,4 +1,5 @@
 # servidor.py
+#Thayssa Daniele Pacheco Romão e Matheus Araújo Akiyoshi Loureiro
 import socket
 import threading
 import os

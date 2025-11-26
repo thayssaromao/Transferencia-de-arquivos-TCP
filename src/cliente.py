@@ -1,4 +1,5 @@
 # cliente.py
+#Thayssa Daniele Pacheco Romão e Matheus Araújo Akiyoshi Loureiro
 import socket
 import threading 
 from utils import FileChecker

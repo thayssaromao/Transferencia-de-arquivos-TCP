@@ -106,12 +106,11 @@ def start_server():
     """
     Função principal para iniciar o servidor.
     """
-    # Cria o socket do servidor
     # socket.AF_INET: Usando IPv4
     # socket.SOCK_STREAM: Usando TCP
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
-    # Define uma opção para reutilizar o endereço/porta (útil para testes rápidos)
+    # Define uma opção para reutilizar o endereço/porta 
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     try:
@@ -128,13 +127,9 @@ def start_server():
         chat_thread.start()
 
         while True:
-            # Aguarda (bloqueia) por uma nova conexão
-            # accept() retorna um novo socket (conn) para comunicação 
-            # com o cliente e o endereço (addr) do cliente.
+
             conn, addr = server_socket.accept()
 
-            # Cria e inicia uma nova thread para lidar com o cliente
-            # A thread principal (esta) volta imediatamente para o accept()
             client_thread = threading.Thread(target=handle_client, args=(conn, addr))
             client_thread.start()
 
@@ -143,7 +138,7 @@ def start_server():
     except Exception as e:
         print(f"Erro ao iniciar o servidor: {e}")
     finally:
-        # Fecha o socket principal do servidor
+  
         server_socket.close()
         print("Servidor desligado.")
 

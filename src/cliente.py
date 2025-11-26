@@ -11,7 +11,6 @@ BUFFER_SIZE = 4096
 EXIT_COMMAND = "SAIR"
 
 # variáveis globais
-lista_arquivos_servidor = []
 arquivo_em_download = None
 arquivo_lock = threading.Lock()
 
@@ -174,7 +173,7 @@ def start_client():
                     if mensagem:
                         # Monta o protocolo: CHAT <mensagem>
                         comando_final = f"CHAT {mensagem}"
-                        client_socket.sendall(comando_final.encode('utf-8'))
+                       c client_socket.sendall(omando_final.encode('utf-8'))
                     else:
                         print("⚠️  Mensagem vazia não enviada.")
 

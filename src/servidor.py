@@ -17,6 +17,7 @@ SERVER_FILES_DIR = "files"
 clientes_conectados = []
 clientes_lock = threading.Lock()  # Para sincronizar acesso à lista
 
+
 def handle_client(conn, addr):
     print(f"✔️  [NOVA CONEXÃO] {addr} conectado.")
 
@@ -77,8 +78,10 @@ def handle_client(conn, addr):
         with clientes_lock:
             if conn in clientes_conectados:
                 clientes_conectados.remove(conn)
+            print(f"[CLIENTE {addr}] Conexão encerrada.")
+            print(f"Ativas: {len(clientes_conectados)} clientes.")
         conn.close()
-        print(f"[CLIENTE {addr}] Conexão encerrada.")
+
 
 def broadcast_chat(mensagem):
     with clientes_lock:
@@ -136,7 +139,8 @@ def start_server():
             
             # Mostra quantas threads (clientes) estão ativas
             # (-1 para não contar a thread principal)
-            print(f"Ativas: {threading.active_count() - 1} conexões de clientes.")
+            with clientes_lock:
+                print(f"Ativas: {len(clientes_conectados)} conexões de clientes.")
 
     except KeyboardInterrupt:
         print("\nServidor sendo desligado...")

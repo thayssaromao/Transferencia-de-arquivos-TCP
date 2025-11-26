@@ -67,6 +67,12 @@ def recv_handler(client_socket):
             
             elif resposta.startswith("OK_CHAT"):
                 print(f"\nConfirmação do Servidor: {resposta}")
+
+            elif resposta.startswith("ERRO_ARQUIVO_INEXISTENTE"):
+                print(f"\nArquivo não encontrado no servidor: {resposta.split()[1]}")
+                # Limpa a variável caso estivesse tentando baixar
+                arquivo_em_download = None
+                continue
             
             # Resposta de listagem de arquivos
             elif ";" in resposta or resposta == "VAZIO":

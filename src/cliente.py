@@ -73,21 +73,6 @@ def recv_handler(client_socket):
                 # Limpa a variável caso estivesse tentando baixar
                 arquivo_em_download = None
                 continue
-            
-            # Resposta de listagem de arquivos
-            elif ";" in resposta or resposta == "VAZIO":
-                lista_arquivos_servidor.clear()
-
-                if resposta == "VAZIO":
-                    lista_arquivos_servidor.append("VAZIO")
-                else:
-                    arquivos = [a.strip() for a in resposta.split(";") if a.strip()]
-                    lista_arquivos_servidor.extend(arquivos)
-                
-                print("\nArquivos disponíveis no servidor:")
-                for arq in lista_arquivos_servidor:
-                    print(" -", arq)
-                continue
 
             elif resposta.startswith("TAMANHO"):
                 if not arquivo_em_download:

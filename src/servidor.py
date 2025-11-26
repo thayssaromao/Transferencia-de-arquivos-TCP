@@ -36,20 +36,6 @@ def handle_client(conn, addr):
                 print(f"🔌  [CLIENTE {addr}] Enviou comando SAIR. Encerrando conexão.")
                 break
 
-
-            # LISTAR ARQUIVOS
-            if mensagem == "LISTAR_ARQUIVOS":
-                try:
-                    arquivos = os.listdir(SERVER_FILES_DIR)
-                    # Apenas arquivos, ignorar pastas
-                    arquivos = [f for f in arquivos if os.path.isfile(os.path.join(SERVER_FILES_DIR, f))]
-                    resposta = ";".join(arquivos) if arquivos else "VAZIO"
-                except:
-                    resposta = "ERRO_LISTAR"
-
-                conn.sendall(resposta.encode('utf-8'))
-                continue
-
             # ENVIAR ARQUIVO SOLICITADO
             if mensagem.startswith("ARQUIVO "):
                 partes = mensagem.split(" ", 1)

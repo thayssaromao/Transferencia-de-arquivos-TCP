@@ -46,6 +46,7 @@ def handle_client(conn, addr):
 
                 if not os.path.exists(caminho):
                     erro = f"ERRO_ARQUIVO_INEXISTENTE {nome_arquivo}"
+                    print(erro)
                     conn.sendall(erro.encode('utf-8'))
                     continue
 

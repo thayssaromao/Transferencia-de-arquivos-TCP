@@ -153,8 +153,6 @@ def start_client():
             listener_thread.daemon = True
             listener_thread.start()
 
-            
-
             while True:
                 # --- MENU INTERATIVO --- #
                 print("\n" + "="*30)
@@ -173,7 +171,7 @@ def start_client():
                     if mensagem:
                         # Monta o protocolo: CHAT <mensagem>
                         comando_final = f"CHAT {mensagem}"
-                       c client_socket.sendall(omando_final.encode('utf-8'))
+                        client_socket.sendall(comando_final.encode('utf-8'))
                     else:
                         print("⚠️  Mensagem vazia não enviada.")
 
@@ -193,8 +191,6 @@ def start_client():
                     comando = f"ARQUIVO {nome_do_arquivo}"
                     client_socket.sendall(comando.encode('utf-8'))
                     print(f"📤 Solicitado: {comando}")
-
-
 
                 elif opcao == "3":
                     print(f"📤 Enviando comando '{EXIT_COMMAND}' e encerrando...")

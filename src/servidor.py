@@ -3,8 +3,8 @@
 import socket
 import threading
 import os
-import time
-from utils.functions import calcula_sha256
+#import time
+#from utils.functions import calcula_sha256
 
 # Configurações do Servidor
 HOST = '127.0.0.1' 
@@ -14,8 +14,8 @@ BUFFER_SIZE = 1024 # Tamanho padrão de buffer
 SERVER_FILES_DIR = "files"
 
 # Lista global para armazenar conexões ativas
-clientes_conectados = []
-clientes_lock = threading.Lock()  # Para sincronizar acesso à lista
+#clientes_conectados = []
+#clientes_lock = threading.Lock()  # Para sincronizar acesso à lista
 
 def handle_client(conn, addr):
     print(f"✔️  [NOVA CONEXÃO WEB] {addr} conectado.")
@@ -90,6 +90,50 @@ def handle_client(conn, addr):
 # Ao rodar o servidor, abra uma pagina no navegador http://127.0.0.1:12345/index.html
 #teste de erro com http://127.0.0.1:12345/abacate.html
 
+def start_server():
+    """
+    Função principal para iniciar o servidor.
+    """
+    # socket.AF_INET: Usando IPv4
+    # socket.SOCK_STREAM: Usando TCP
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+    # Define uma opção para reutilizar o endereço/porta 
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    try:
+        # Vincula (bind) o socket ao HOST e PORTA
+        server_socket.bind((HOST, PORTA))
+
+        # Coloca o socket em modo de escuta (listen)
+        server_socket.listen()
+        print(f"\n ---------------------------------------\n")
+        print(f"🚀  Servidor TCP Multithread ouvindo em {HOST}:{PORTA}...\n")
+
+        #chat_thread = threading.Thread(target=server_chat_console)
+        #chat_thread.daemon = True
+        #chat_thread.start()
+
+        while True:
+
+            conn, addr = server_socket.accept()
+
+            client_thread = threading.Thread(target=handle_client, args=(conn, addr))
+            client_thread.start()
+
+    except KeyboardInterrupt:
+        print("\nServidor sendo desligado...")
+    except Exception as e:
+        print(f"Erro ao iniciar o servidor: {e}")
+    finally:
+  
+        server_socket.close()
+        print("Servidor desligado.")
+
+if __name__ == "__main__":
+    start_server()
+
+
 # VERSAO ANTIGA TCP
 
 # def handle_client(conn, addr):
@@ -158,63 +202,19 @@ def handle_client(conn, addr):
 #         conn.close()
 
 
-def broadcast_chat(mensagem):
-    with clientes_lock:
-        for cliente in clientes_conectados:
-            try:
-                cliente.sendall(f"CHAT_SERVER: {mensagem}".encode('utf-8'))
-            except:
-                pass  # Ignora erros de clientes desconectados
+#def broadcast_chat(mensagem):
+#    with clientes_lock:
+#        for cliente in clientes_conectados:
+#            try:
+#                cliente.sendall(f"CHAT_SERVER: {mensagem}".encode('utf-8'))
+#            except:
+#                pass  # Ignora erros de clientes desconectados
 
-def server_chat_console():
-    print("Servidor pronto para enviar mensagens!")
-    print("Servidor: ", end="", flush=True)
-
-    while True:
-        msg = input()
-        if msg.strip():  # Evita enviar mensagens vazias
-            broadcast_chat(msg)
-
-
-def start_server():
-    """
-    Função principal para iniciar o servidor.
-    """
-    # socket.AF_INET: Usando IPv4
-    # socket.SOCK_STREAM: Usando TCP
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
-    # Define uma opção para reutilizar o endereço/porta 
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-    try:
-        # Vincula (bind) o socket ao HOST e PORTA
-        server_socket.bind((HOST, PORTA))
-
-        # Coloca o socket em modo de escuta (listen)
-        server_socket.listen()
-        print(f"\n ---------------------------------------\n")
-        print(f"🚀  Servidor TCP Multithread ouvindo em {HOST}:{PORTA}...\n")
-
-        chat_thread = threading.Thread(target=server_chat_console)
-        chat_thread.daemon = True
-        chat_thread.start()
-
-        while True:
-
-            conn, addr = server_socket.accept()
-
-            client_thread = threading.Thread(target=handle_client, args=(conn, addr))
-            client_thread.start()
-
-    except KeyboardInterrupt:
-        print("\nServidor sendo desligado...")
-    except Exception as e:
-        print(f"Erro ao iniciar o servidor: {e}")
-    finally:
-  
-        server_socket.close()
-        print("Servidor desligado.")
-
-if __name__ == "__main__":
-    start_server()
+#def server_chat_console():
+#    print("Servidor pronto para enviar mensagens!")
+#    print("Servidor: ", end="", flush=True)
+#
+#    while True:
+#        msg = input()
+#        if msg.strip():  # Evita enviar mensagens vazias
+#            broadcast_chat(msg)
